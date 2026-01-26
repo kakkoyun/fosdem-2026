@@ -16,7 +16,7 @@ var CmdRun = &cli.Command{
 	Run one or more experiments.
 	
 	Available scenarios: default (no instrumentation), manual (manual instrumentation using OTel SDK), obi (Opentelemetry eBPF Instrumentation),
-	ebpf (OpenTelemetry "Auto Instrumentation"), orchestrion (compile-time instrumentation using Orchestrion)
+	ebpf (OpenTelemetry "Auto Instrumentation"), orchestrion (compile-time instrumentation using Orchestrion), usdt (USDT probes with bpftrace)
 
 	Use scenario "all" to run all scenarios.
 
