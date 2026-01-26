@@ -1,0 +1,19 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * USDT tracing for FOSDEM Go application with JSON output
+ * This script captures request_start and request_end events and outputs them as JSON
+ * for consumption by the OTel exporter.
+ */
+
+usdt::fosdem:request_start
+{
+    printf("{\"event\":\"request_start\",\"reqid\":\"%s\",\"timestamp\":%lld}\n", 
+           str(arg0), arg1);
+}
+
+usdt::fosdem:request_end
+{
+    printf("{\"event\":\"request_end\",\"reqid\":\"%s\",\"start\":%lld,\"duration\":%lld}\n", 
+           str(arg0), arg1, arg2);
+}

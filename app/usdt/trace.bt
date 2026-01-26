@@ -1,0 +1,61 @@
+#!/usr/bin/env bpftrace
+
+/*
+ * USDT tracing for FOSDEM Go application
+ * 
+ * This script attaches to USDT probes in the Go application and tracks
+ * request latencies, exporting them in a format compatible with observability tools.
+ */
+
+BEGIN
+{
+    printf("Tracing USDT probes for FOSDEM app...\n");
+    printf("Provider: fosdem\n");
+    printf("Hit Ctrl-C to end.\n");
+}
+
+usdt::fosdem:request_start
+{
+    @start[str(arg0)] = nsecs;
+    printf("start: reqID=%s timestamp=%lld\n", str(arg0), arg1);
+}
+
+usdt::fosdem:request_end
+/@start[str(arg0)]/
+{
+    $latency_ns = nsecs - @start[str(arg0)];
+    $latency_us = $latency_ns / 1000;
+    $latency_ms = $latency_us / 1000;
+    
+    printf("end: reqID=%s start=%lld duration=%lld latency_ms=%lld\n", 
+           str(arg0), arg1, arg2, $latency_ms);
+    
+    // Histogram of request latencies in microseconds
+    @latency_hist_us = lhist($latency_us, 0, 10000, 100);
+    
+    // Count of requests
+    @request_count++;
+    
+    // Track total latency for average calculation
+    @total_latency_ns += $latency_ns;
+    
+    delete(@start[str(arg0)]);
+}
+
+END
+{
+    printf("\n--- USDT Tracing Summary ---\n");
+    printf("Total requests: %lld\n", @request_count);
+    
+    if (@request_count > 0) {
+        printf("Average latency (ms): %lld\n", (@total_latency_ns / @request_count) / 1000000);
+    }
+    
+    printf("\nLatency histogram (microseconds):\n");
+    print(@latency_hist_us);
+    
+    clear(@start);
+    clear(@latency_hist_us);
+    clear(@request_count);
+    clear(@total_latency_ns);
+}
