@@ -302,8 +302,8 @@ func buildGoEnvironment(ctx context.Context, opts *RunManyOpts, scenario string)
 	if opts.Inputs.RuntimeVersion != "" {
 		buildArgs["runtime_version"] = opts.Inputs.RuntimeVersion
 	} else {
-		buildArgs["runtime_version"] = "1.25.5"
-		log.Warn("no runtime version specified, using default", "version", "1.25.5")
+		buildArgs["runtime_version"] = "1.22.10"
+		log.Warn("no runtime version specified, using default", "version", "1.22.10")
 	}
 
 	// Build the Dockerfile for the given scenario
@@ -534,8 +534,8 @@ func setupUSDTEnvironment(ctx context.Context, opts *RunManyOpts) (func(containe
 	// Build the exporter image first
 	log.Info("⌛ Building USDT exporter image...")
 	exporterBuild := &BuildOpts{
-		Dir:  filepath.Join(getRoot(), "app/usdt"),
-		Args: map[string]string{},
+		Dir:     filepath.Join(getRoot(), "app/usdt"),
+		Args:    map[string]string{},
 		Secrets: map[string]string{},
 	}
 	buildCmd := dockerClient.BuildCommand(ctx, exporterBuild, "usdt-exporter")

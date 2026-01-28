@@ -1,14 +1,23 @@
-FROM golang:1.23-bookworm AS builder
+FROM golang:1.22-bookworm AS builder
 
 WORKDIR /build
+
+# Set GOTOOLCHAIN to prevent auto-upgrade
+ENV GOTOOLCHAIN=local
 
 # Initialize Go module
 RUN go mod init exporter
 
 # Copy source
-COPY exporter/main.go ./
+COPY app/usdt/exporter/main.go ./
 
-# Download dependencies
+# Pin to known-good OTel versions for Go 1.22
+RUN go get go.opentelemetry.io/otel@v1.21.0 && \
+    go get go.opentelemetry.io/otel/trace@v1.21.0 && \
+    go get go.opentelemetry.io/otel/sdk@v1.21.0 && \
+    go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.21.0
+
+# Download remaining dependencies
 RUN go mod tidy
 
 # Build the exporter
@@ -21,7 +30,7 @@ FROM quay.io/iovisor/bpftrace:latest
 COPY --from=builder /build/bpftrace-exporter /usr/local/bin/
 
 # Copy the bpftrace script
-COPY exporter/trace-json.bt /app/trace-json.bt
+COPY app/usdt/exporter/trace-json.bt /app/trace-json.bt
 
 # Set environment defaults
 ENV OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4318

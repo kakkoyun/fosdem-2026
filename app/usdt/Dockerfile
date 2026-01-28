@@ -1,4 +1,4 @@
-ARG runtime_version
+ARG runtime_version=1.22.10
 FROM golang:${runtime_version}-bookworm
 
 # Install libstapsdt and dependencies
@@ -22,7 +22,6 @@ WORKDIR /app
 RUN go mod init usdt
 
 COPY app/usdt/main.go ./
-COPY app/usdt/binaries/ /binaries/
 COPY entry.sh ./
 
 RUN go mod tidy

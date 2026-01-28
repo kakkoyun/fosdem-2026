@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -168,16 +168,35 @@ func runBPFTrace(ctx context.Context) error {
 }
 
 func processEvent(ctx context.Context, jsonLine string) error {
-	// Parse the custom event format from our bpftrace script
-	// Expected format: {"event":"request_start","reqid":"...", "timestamp":...}
-	//                  {"event":"request_end","reqid":"...", "start":..., "duration":...}
-
-	var event map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonLine), &event); err != nil {
-		return fmt.Errorf("failed to parse JSON: %w", err)
+	// First parse the bpftrace JSON wrapper format
+	// With -f json flag, bpftrace outputs: {"type":"printf","data":"..."}
+	var wrapper map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonLine), &wrapper); err != nil {
+		return fmt.Errorf("failed to parse JSON wrapper: %w", err)
 	}
 
-	eventType, ok := event["event"].(string)
+	// Only process printf events
+	eventType, ok := wrapper["type"].(string)
+	if !ok || eventType != "printf" {
+		// Skip non-printf events (like attached_probes)
+		return nil
+	}
+
+	// Extract the printf data which contains our actual event JSON
+	dataStr, ok := wrapper["data"].(string)
+	if !ok {
+		return fmt.Errorf("missing or invalid data field")
+	}
+
+	// Now parse our custom event format from the printf data
+	// Expected format: {"event":"request_start","reqid":"...", "timestamp":...}
+	//                  {"event":"request_end","reqid":"...", "start":..., "duration":...}
+	var event map[string]interface{}
+	if err := json.Unmarshal([]byte(dataStr), &event); err != nil {
+		return fmt.Errorf("failed to parse event JSON: %w", err)
+	}
+
+	probeEvent, ok := event["event"].(string)
 	if !ok {
 		return fmt.Errorf("missing or invalid event type")
 	}
@@ -187,7 +206,7 @@ func processEvent(ctx context.Context, jsonLine string) error {
 		return fmt.Errorf("missing or invalid request ID")
 	}
 
-	switch eventType {
+	switch probeEvent {
 	case "request_start":
 		return handleRequestStart(ctx, reqID, event)
 	case "request_end":

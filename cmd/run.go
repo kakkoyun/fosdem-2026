@@ -50,7 +50,7 @@ var CmdRun = &cli.Command{
 			Force:    c.Bool("force"),
 			Inputs: &Input{
 				Port:           8080,
-				RuntimeVersion: "1.25.5",
+				RuntimeVersion: "1.22.10",
 				Flush:          true,
 				RPS:            1,
 				Duration:       5,
